@@ -1,3 +1,3 @@
 # MarsRover
 
-RobotC source code for TXRX Labs.
+RobotC source code for TXRX Labs' VEX IQ challenge.
