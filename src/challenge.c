@@ -12,8 +12,6 @@ const int ROTATION_SPEED = 50;
 const int ARM_SPEED = 50;
 const int CLAW_SPEED = 50;
 
-bool limitSwitchPressed();
-
 /// drive the robot forward using motor encoders
 void driveWithEncoders(int degrees){
 	resetMotorEncoder(leftMotor);
@@ -23,7 +21,7 @@ void driveWithEncoders(int degrees){
 	waitUntilMotorStop(leftMotor);
 }
 
-/// rotate with counterclockwise as positive
+/// rotate with counterclockwise (left) as positive
 void rotate(int degrees){
 	resetGyro(gyro);
 	if(degrees > 0){
@@ -40,8 +38,13 @@ void rotate(int degrees){
 	}
 }
 
+/// returns whether or not robot is pressed up against something
+bool limitSwitchPressed(){
+	return getBumperValue(limitSwitchSensor);
+}
+
 /** pick up and put down objects
- * @param pickingUp true if object is getting picked up false if being put down
+ * @param pickingUp true if object is getting picked up and false if being put down
  */
 void useClaw(bool pickingUp){
 	while(!limitSwitchPressed()){
@@ -58,11 +61,6 @@ void useClaw(bool pickingUp){
 	}
 }
 
-/// returns whether or not robot is pressed up against something
-bool limitSwitchPressed(){
-	return getBumperValue(limitSwitchSensor);
-}
-
 /// called when program starts
 task main()
 {
@@ -71,7 +69,6 @@ task main()
 	// drive to object
 	driveWithEncoders(500);
 	rotate(-90);
-
 	// keep going until we hit the object
 	while(!limitSwitchPressed()) {
 		setMotorSpeed(leftMotor, DRIVE_SPEED);
@@ -86,7 +83,6 @@ task main()
 
 	// rotate and back up until it finds the line
 	rotate(-45);
-
 	while(getColorGrayscale(colorSensor) > LINE_THRESHOLD){
 		setMotorSpeed(leftMotor, -DRIVE_SPEED);
 		setMotorSpeed(rightMotor, -DRIVE_SPEED);

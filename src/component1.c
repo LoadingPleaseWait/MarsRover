@@ -1,17 +1,12 @@
-#pragma config(Motor, motor10,          armMotor,     tmotorVexIQ, openLoop, encoder)
-#pragma config(Motor, motor11,          clawMotor,    tmotorVexIQ, openLoop, encoder)
+#pragma config(Motor,  motor1,          leftMotor,          tmotorVexIQ, openLoop, encoder)
+#pragma config(Motor,  motor6,          rightMotor,         tmotorVexIQ, openLoop, reversed, encoder)
+#pragma config(Sensor, port12,          limitSwitchSensor,  sensorVexIQ_Touch)
 
-const int CLAW_SPEED = 50;
-const int ARM_SPEED = 50;
-
-/// begin program
+/// task that gets called right when the program is run
 task main(){
-	// close claw
-	resetMotorEncoder(clawMotor);
-	setServoTarget(clawMotor, 200);
-	sleep(1000);
-	// bring arm up
-	resetMotorEncoder(armMotor);
-	setMotorTarget(armMotor, 700, ARM_SPEED);
-	waitUntilMotorStop(armMotor);
+	// drive until robot runs into an object
+	while(!getBumperValue(limitSwitchSensor)){
+		setMotorSpeed(leftMotor, 50);
+		setMotorSpeed(rightMotor, 50);
+	}
 }
