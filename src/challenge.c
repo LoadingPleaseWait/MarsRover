@@ -77,12 +77,12 @@ void rotate(int degrees, bool reset){
         // counterclockwise turn
         while(getGyroHeading(gyro) < degrees){
             setMotorSpeed(leftMotor, -proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
-            setMotorSpeed(rightMotor, proportionalOutput(kP, degrees, getGyroHeading(gyro)));
+            setMotorSpeed(rightMotor, proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
         }
     } else {
         while(getGyroHeading(gyro) > degrees){
-            setMotorSpeed(leftMotor, proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
-            setMotorSpeed(rightMotor, -proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
+            setMotorSpeed(leftMotor, -proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
+            setMotorSpeed(rightMotor, proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
         }
     }
 
