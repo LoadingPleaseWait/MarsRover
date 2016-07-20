@@ -8,9 +8,13 @@
 
 const long LINE_THRESHOLD = 180;
 const int DRIVE_SPEED = 50;
-const int ROTATION_SPEED = 50;
 const int ARM_SPEED = 50;
 const int CLAW_SPEED = 50;
+
+/// calculate error for a proportional controller
+float proportionalOutput(float kP, float target, float input){
+    return kP * (target - input);
+}
 
 /// drive the robot forward using motor encoders
 void driveWithEncoders(int degrees){
@@ -24,6 +28,7 @@ void driveWithEncoders(int degrees){
     sleep(200);
 }
 
+/// drive a certain distance in inches
 void driveInches(float inches, int driveSpeed) {
     resetMotorEncoder(leftMotor);
     resetMotorEncoder(rightMotor);
@@ -35,34 +40,25 @@ void driveInches(float inches, int driveSpeed) {
     sleep(200);
 }
 
+/// drive straight using the gyro
 void gyroDriveInches(float inches, int driveSpeed) {
     inches = inches-2;
     float kP = 2.5;
-    float gyroError;
     bool onTarget = false;
     resetMotorEncoder(leftMotor);
     resetMotorEncoder(rightMotor);
     resetGyro(gyro);
-    
+
     while(!onTarget) {
-        
-        gyroError = getGyroDegreesFloat(gyro);
-        
+
         if(getMotorEncoder(leftMotor) < inches/7.8) {
-            setMotorSpeed(leftMotor, driveSpeed+(kP*gyroError));
-        }
-        else {
-            setMotorSpeed(leftMotor, 0);
-            setMotorSpeed(rightMotor, 0);
-            break;
-        }
-        
-        if(getMotorEncoder(rightMotor) < inches/7.8) {
-            setMotorSpeed(rightMotor, driveSpeed-(kP*gyroError));
-        }
-        
-        if(getMotorEncoder(leftMotor) >= inches/7.8) {
+            setMotorSpeed(leftMotor, driveSpeed + proportionalOutput(kP, 0, getGyroDegreesFloat(gyro)));
+        }else {
             onTarget = true;
+        }
+
+        if(getMotorEncoder(rightMotor) < inches/7.8) {
+            setMotorSpeed(rightMotor, driveSpeed - proportionalOutput(kP, 0, getGyroDegreesFloat(gyro)));
         }
     }
     setMotorSpeed(leftMotor, 0);
@@ -74,27 +70,22 @@ void gyroDriveInches(float inches, int driveSpeed) {
 void rotate(int degrees, bool reset){
     if(reset)
         resetGyro(gyro);
-    
+
+    float kP = 1;
+
     if(degrees > 0){
         // counterclockwise turn
         while(getGyroHeading(gyro) < degrees){
-            setMotorSpeed(leftMotor, -ROTATION_SPEED);
-            setMotorSpeed(rightMotor, ROTATION_SPEED);
+            setMotorSpeed(leftMotor, -proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
+            setMotorSpeed(rightMotor, proportionalOutput(kP, degrees, getGyroHeading(gyro)));
         }
     } else {
         while(getGyroHeading(gyro) > degrees){
-            setMotorSpeed(leftMotor, ROTATION_SPEED);
-            setMotorSpeed(rightMotor, -ROTATION_SPEED);
+            setMotorSpeed(leftMotor, proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
+            setMotorSpeed(rightMotor, -proportionalOutput(kP, degrees, getGyroDegreesFloat(gyro)));
         }
     }
-    
-    setMotorSpeed(leftMotor, 0);
-    setMotorSpeed(rightMotor, 0);
-    sleep(200);
-}
 
-void rotate2(int degrees) {
-    
     setMotorSpeed(leftMotor, 0);
     setMotorSpeed(rightMotor, 0);
     sleep(200);
@@ -105,6 +96,7 @@ bool limitSwitchPressed(){
     return getBumperValue(limitSwitchSensor);
 }
 
+/// move arm back to bottom
 void homeArm() {
     while(!limitSwitchPressed()){
         setMotorSpeed(armMotor, -ARM_SPEED);
@@ -113,12 +105,14 @@ void homeArm() {
     resetMotorEncoder(armMotor);
 }
 
+/// close or open claw
 void clawClose(bool close) {
     setMotorSpeed(clawMotor, (close ? 1 * CLAW_SPEED : -1) * CLAW_SPEED);
     sleep(200);
     setMotorSpeed(clawMotor, 0);
 }
 
+/// move arm to certain degrees
 void setArmDegrees(float degrees) {
     resetMotorEncoder(armMotor);
     setMotorTarget(armMotor, degrees/360, ARM_SPEED);
@@ -129,9 +123,9 @@ void setArmDegrees(float degrees) {
 task main()
 {
     setMotorEncoderUnits(encoderRotations);
-    
+
     setMotorSpeed(armMotor, 0);// don't let arm move around
-    
+
     // drive to object
     driveInches(13.0, 50);
     rotate(-90, true);
@@ -149,31 +143,33 @@ task main()
     rotate(90, true);
     driveInches(12.0, 50);
     rotate(90, true);
-    
+
     // keep going until we hit the object
     while(!limitSwitchPressed()) {
         setMotorSpeed(leftMotor, DRIVE_SPEED);
         setMotorSpeed(rightMotor, DRIVE_SPEED);
     }
-    
+
     // back up
     driveInches(-4.0, 50);
-    
+
+    // pick up object
     clawClose(false);
     homeArm();
     driveInches(1, 50);
     clawClose(true);
     driveInches(-4, 50);
     setArmDegrees(400);
-    
+
+    // get to line
     while(getColorGrayscale(colorSensor) > LINE_THRESHOLD){
         setMotorSpeed(leftMotor, DRIVE_SPEED);
     }
-    
+
     while(!limitSwitchPressed()) {
         // follow line
         displayString(1, "%d", getColorGrayscale(colorSensor));
-        
+
         if(getColorGrayscale(colorSensor) > LINE_THRESHOLD) {
             setMotorSpeed(leftMotor, 50);
             setMotorSpeed(rightMotor, 0);
@@ -182,7 +178,7 @@ task main()
             setMotorSpeed(rightMotor, 50);
         }
     }
-    
+
     // back up and put down object
     driveInches(-3.5, 50);
     homeArm();
